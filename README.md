@@ -6,11 +6,9 @@ Built with [bubbletea](https://github.com/charmbracelet/bubbletea) and [lipgloss
 
 ## Why
 
-Running local inference on Apple Silicon means caring about things you never had to before: which GPU core clusters are active, whether your workload is hitting the compute pipeline or just the tiler, how much unified memory is under pressure, and whether thermal throttling is about to ruin your batch.
+`top` doesn't show GPU. `powermetrics` needs sudo. Activity Monitor is a GUI. None of them show unified memory pressure, GPU compute vs graphics breakdown, or per-process GPU time in one place.
 
-The standard tools (`Activity Monitor`, `top`, `powermetrics`) either lack GPU detail, require sudo, or don't show the full picture in one place. Panopticon gives you a single terminal view of everything that matters on Apple Silicon, updating at 5Hz with no elevated privileges.
-
-It also integrates with [Aurelia](https://github.com/benaskins/aurelia), a macOS-native process supervisor, to show service state and logs alongside hardware metrics — useful when you're running inference servers, databases, and supporting services together.
+Panopticon does — 5Hz, no sudo, one terminal. Optionally integrates with [Aurelia](https://github.com/benaskins/aurelia) for service management alongside hardware metrics.
 
 ## Features
 
