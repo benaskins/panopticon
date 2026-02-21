@@ -21,6 +21,9 @@ type Snapshot struct {
 	// Memory
 	Memory MemoryInfo
 
+	// Top memory-consuming processes
+	MemoryProcs []MemProc
+
 	// GPU (with smoothed utilization)
 	GPU GPUSample
 
@@ -50,6 +53,10 @@ type Collector struct {
 	emaRenderer float64
 	emaDevice   float64
 	emaInit     bool
+
+	// Cached memory processes (refreshed every ~2s)
+	memProcs     []MemProc
+	memProcsTime time.Time
 }
 
 // NewCollector creates a collector and takes initial samples for delta computation.
@@ -81,6 +88,12 @@ func (c *Collector) Poll() Snapshot {
 	// Memory
 	mem := SampleMemory()
 
+	// Top memory processes (refresh every 2s)
+	if now.Sub(c.memProcsTime) >= 2*time.Second {
+		c.memProcs = SampleMemProcs(8)
+		c.memProcsTime = now
+	}
+
 	// GPU — smooth utilization with EMA
 	gpu := SampleGPU()
 	gpu.Util = c.smoothGPUUtil(gpu.Util)
@@ -101,6 +114,7 @@ func (c *Collector) Poll() Snapshot {
 	return Snapshot{
 		CPUUsage:     cpuUsage,
 		Memory:       mem,
+		MemoryProcs:  c.memProcs,
 		GPU:          gpu,
 		GPUClients:   gpuClients,
 		DiskReadMBs:  diskR,

@@ -8,11 +8,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// MemoryPanel renders a vertical memory bar.
+// MemoryPanel renders a vertical memory bar with top processes.
 type MemoryPanel struct {
-	Width  int
-	Height int
-	Data   hw.MemoryInfo
+	Width    int
+	Height   int
+	Data     hw.MemoryInfo
+	TopProcs []hw.MemProc
 }
 
 func NewMemoryPanel() MemoryPanel {
@@ -24,45 +25,87 @@ func (m MemoryPanel) View() string {
 	totalGB := float64(m.Data.TotalBytes) / (1024 * 1024 * 1024)
 	pct := m.Data.UsagePercent()
 
-	// Vertical bar: filled from bottom
-	barHeight := m.Height - 3 // leave room for label + numbers
-	if barHeight < 1 {
-		barHeight = 1
+	// Narrow vertical bar (4 chars wide)
+	barHeight := m.Height - 5 // room for border, summary, spacing
+	if barHeight < 3 {
+		barHeight = 3
 	}
 	filledRows := int(pct / 100 * float64(barHeight))
 	if filledRows > barHeight {
 		filledRows = barHeight
 	}
 
-	barWidth := m.Width - 4 // padding inside border
-	if barWidth < 4 {
-		barWidth = 4
-	}
+	barWidth := 4
+	color := LerpColor(pct/100, [3]int{25, 80, 60}, [3]int{180, 50, 40})
 
-	var rows []string
+	var barRows []string
 	for i := 0; i < barHeight; i++ {
-		rowIdx := barHeight - 1 - i // top to bottom
+		rowIdx := barHeight - 1 - i
 		if rowIdx < filledRows {
-			// Filled
 			block := strings.Repeat("█", barWidth)
-			color := LerpColor(pct/100, [3]int{25, 80, 60}, [3]int{180, 50, 40})
-			rows = append(rows, lipgloss.NewStyle().Foreground(color).Render(block))
+			barRows = append(barRows, lipgloss.NewStyle().Foreground(color).Render(block))
 		} else {
-			// Empty
 			block := strings.Repeat("░", barWidth)
-			rows = append(rows, lipgloss.NewStyle().Foreground(LabelColor).Render(block))
+			barRows = append(barRows, lipgloss.NewStyle().Foreground(LabelColor).Render(block))
 		}
 	}
 
-	bar := strings.Join(rows, "\n")
-	label := fmt.Sprintf("%.1f/%.0fGB", usedGB, totalGB)
-	pctLabel := fmt.Sprintf("%.0f%%", pct)
+	bar := strings.Join(barRows, "\n")
+	summary := fmt.Sprintf("%.0f/%.0fG %s",
+		usedGB, totalGB,
+		ValueStyle.Render(fmt.Sprintf("%.0f%%", pct)))
 
-	content := lipgloss.JoinVertical(lipgloss.Center,
-		bar,
-		LabelStyle.Render(label),
-		ValueStyle.Render(pctLabel),
-	)
+	// Top processes
+	procList := m.renderProcs(barHeight)
+
+	var content string
+	if procList != "" {
+		// Bar on left, procs on right
+		left := lipgloss.JoinVertical(lipgloss.Center, bar)
+		content = lipgloss.JoinHorizontal(lipgloss.Top, left, " ", procList)
+		content += "\n" + LabelStyle.Render(summary)
+	} else {
+		content = lipgloss.JoinVertical(lipgloss.Center, bar, LabelStyle.Render(summary))
+	}
 
 	return RenderPanel("Memory", content, m.Width)
+}
+
+func (m MemoryPanel) renderProcs(maxLines int) string {
+	if len(m.TopProcs) == 0 {
+		return ""
+	}
+
+	n := maxLines
+	if len(m.TopProcs) < n {
+		n = len(m.TopProcs)
+	}
+
+	nameStyle := lipgloss.NewStyle().Foreground(LabelColor)
+	sizeStyle := lipgloss.NewStyle().Foreground(ValueColor)
+
+	var lines []string
+	for i := 0; i < n; i++ {
+		p := m.TopProcs[i]
+		name := p.Name
+		if len(name) > 10 {
+			name = name[:10]
+		}
+		size := formatBytes(p.RSS)
+		lines = append(lines, fmt.Sprintf("%s %s",
+			nameStyle.Render(fmt.Sprintf("%-10s", name)),
+			sizeStyle.Render(size),
+		))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func formatBytes(b uint64) string {
+	gb := float64(b) / (1024 * 1024 * 1024)
+	if gb >= 1.0 {
+		return fmt.Sprintf("%.1fG", gb)
+	}
+	mb := float64(b) / (1024 * 1024)
+	return fmt.Sprintf("%.0fM", mb)
 }

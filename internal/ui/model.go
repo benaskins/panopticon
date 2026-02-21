@@ -242,6 +242,7 @@ func (m *Model) fetchLogs() {
 
 func (m *Model) updateHWPanels() {
 	m.memoryPanel.Data = m.snapshot.Memory
+	m.memoryPanel.TopProcs = m.snapshot.MemoryProcs
 	m.cpuPanel.Usage = m.snapshot.CPUUsage
 	m.cpuPanel.Topology = m.topology
 	m.gpuPanel.Data = m.snapshot.GPU
@@ -263,7 +264,7 @@ func clamp(v, min int) int {
 
 func (m *Model) layoutPanels() {
 	// Left column: memory (fixed width 20)
-	memWidth := 20
+	memWidth := 28
 	m.memoryPanel.Width = memWidth
 	m.memoryPanel.Height = clamp(m.height-2, 4)
 
