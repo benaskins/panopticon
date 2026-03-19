@@ -24,20 +24,31 @@ typedef struct {
     int client_count;
 } GPUInfo;
 
+// Try multiple AGX accelerator class names across Apple Silicon generations.
+static io_service_t findAGXAccelerator() {
+    const char *classes[] = {
+        "AGXAcceleratorG16X",  // M4 family
+        "AGXAcceleratorG15X",  // M2/M3 family
+        "AGXAcceleratorG14X",  // M1 family
+        "AGXAccelerator",      // fallback
+        NULL
+    };
+    for (int i = 0; classes[i] != NULL; i++) {
+        io_service_t service = IOServiceGetMatchingService(
+            kIOMainPortDefault,
+            IOServiceMatching(classes[i])
+        );
+        if (service != IO_OBJECT_NULL) {
+            return service;
+        }
+    }
+    return IO_OBJECT_NULL;
+}
+
 static GPUUtilization getGPUUtilization() {
     GPUUtilization util = {0};
 
-    io_service_t service = IOServiceGetMatchingService(
-        kIOMainPortDefault,
-        IOServiceMatching("AGXAcceleratorG15X")
-    );
-    if (service == IO_OBJECT_NULL) {
-        // Try the older name
-        service = IOServiceGetMatchingService(
-            kIOMainPortDefault,
-            IOServiceMatching("AGXAccelerator")
-        );
-    }
+    io_service_t service = findAGXAccelerator();
     if (service == IO_OBJECT_NULL) {
         return util;
     }
@@ -80,16 +91,7 @@ static GPUInfo getGPUClients() {
 
     // Walk children of accelerator — IOServiceGetMatchingServices doesn't
     // enumerate UserClient entries, but the child iterator does.
-    io_service_t accel = IOServiceGetMatchingService(
-        kIOMainPortDefault,
-        IOServiceMatching("AGXAcceleratorG15X")
-    );
-    if (accel == IO_OBJECT_NULL) {
-        accel = IOServiceGetMatchingService(
-            kIOMainPortDefault,
-            IOServiceMatching("AGXAccelerator")
-        );
-    }
+    io_service_t accel = findAGXAccelerator();
     if (accel == IO_OBJECT_NULL) {
         return info;
     }

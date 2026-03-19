@@ -37,6 +37,13 @@ import (
 var gpuCoreRe = regexp.MustCompile(`Total Number of Cores:\s*(\d+)`)
 var mgpuRe = regexp.MustCompile(`"num_mgpus"\s*=\s*(\d+)`)
 
+// AGX accelerator class names vary by GPU generation.
+var agxClasses = []string{
+	"AGXAcceleratorG16X", // M4 family
+	"AGXAcceleratorG15X", // M2/M3 family
+	"AGXAcceleratorG14X", // M1 family
+}
+
 func detectTopology() Topology {
 	pCores := int(C.sysctl_int(C.CString("hw.perflevel0.physicalcpu")))
 	eCores := int(C.sysctl_int(C.CString("hw.perflevel1.physicalcpu")))
@@ -83,17 +90,19 @@ func detectGPUCores() int {
 }
 
 func detectGPUGroups() int {
-	out, err := exec.Command("ioreg", "-r", "-c", "AGXAcceleratorG15X", "-d", "1").Output()
-	if err != nil {
-		return 1
+	for _, class := range agxClasses {
+		out, err := exec.Command("ioreg", "-r", "-c", class, "-d", "1").Output()
+		if err != nil || len(out) == 0 {
+			continue
+		}
+		m := mgpuRe.FindStringSubmatch(strings.TrimSpace(string(out)))
+		if m == nil {
+			continue
+		}
+		n, _ := strconv.Atoi(m[1])
+		if n >= 1 {
+			return n
+		}
 	}
-	m := mgpuRe.FindStringSubmatch(strings.TrimSpace(string(out)))
-	if m == nil {
-		return 1
-	}
-	n, _ := strconv.Atoi(m[1])
-	if n < 1 {
-		return 1
-	}
-	return n
+	return 1
 }
