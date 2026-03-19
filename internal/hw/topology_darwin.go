@@ -41,7 +41,8 @@ var mgpuRe = regexp.MustCompile(`"num_mgpus"\s*=\s*(\d+)`)
 var agxClasses = []string{
 	"AGXAcceleratorG16X", // M4 family
 	"AGXAcceleratorG15X", // M2/M3 family
-	"AGXAcceleratorG14X", // M1 family
+	"AGXAcceleratorG13X", // M1 Pro/Max/Ultra
+	"AGXAcceleratorG13G", // M1
 }
 
 func detectTopology() Topology {

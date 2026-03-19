@@ -29,7 +29,8 @@ static io_service_t findAGXAccelerator() {
     const char *classes[] = {
         "AGXAcceleratorG16X",  // M4 family
         "AGXAcceleratorG15X",  // M2/M3 family
-        "AGXAcceleratorG14X",  // M1 family
+        "AGXAcceleratorG13X",  // M1 Pro/Max/Ultra
+        "AGXAcceleratorG13G",  // M1
         "AGXAccelerator",      // fallback
         NULL
     };
