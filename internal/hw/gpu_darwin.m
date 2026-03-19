@@ -27,8 +27,14 @@ typedef struct {
 // Try multiple AGX accelerator class names across Apple Silicon generations.
 static io_service_t findAGXAccelerator() {
     const char *classes[] = {
-        "AGXAcceleratorG16X",  // M4 family
-        "AGXAcceleratorG15X",  // M2/M3 family
+        // Derived from /System/Library/Extensions/AGXG*.kext — newest first.
+        "AGXAcceleratorG16X",  // M3 Pro/Max, M4 Pro/Max/Ultra
+        "AGXAcceleratorG16G",  // M3, M4
+        "AGXAcceleratorG15C",  // (reserved)
+        "AGXAcceleratorG15S",  // (reserved)
+        "AGXAcceleratorG15G",  // A17 Pro
+        "AGXAcceleratorG14X",  // M2 Pro/Max/Ultra
+        "AGXAcceleratorG14G",  // M2
         "AGXAcceleratorG13X",  // M1 Pro/Max/Ultra
         "AGXAcceleratorG13G",  // M1
         "AGXAccelerator",      // fallback
